@@ -44,7 +44,7 @@ export default function App() {
         break;
       }
     }
-    lifo.push(new vh.LifoElement(firstVertex, currentPos, currentPos));
+    lifo.push(new vh.LifoElement(firstVertex, currentPos, currentPos, true));
     currentPos++;
 
     const dfsFinished = false;
@@ -62,7 +62,7 @@ export default function App() {
           edges.push(new vh.Edge(`${lifoElem.key}${nextVertexKey}`, false));
         } else {
           lifoElem.min = elemInLifo.pos;
-          edges.push(new vh.Edge(`${nextVertexKey}${lifoElem.key}`, true));
+          edges.push(new vh.Edge(`${lifoElem.key}${nextVertexKey}`, true));
         }
         tempVer = zeroOutValues(
           lifoElem,
@@ -70,6 +70,30 @@ export default function App() {
           nextVertexKey,
           tempVer
         );
+      } else {
+        console.log("nowhere else to go");
+        const popped = lifo.pop();
+        console.log("Popped: ", popped);
+        const afterPopIndex = lifo.length - 1;
+        const afterPopLastElem = lifo[afterPopIndex];
+        if (afterPopLastElem.min < popped.min) {
+          afterPopLastElem.min = popped.min;
+        }
+        if (afterPopLastElem.pos <= popped.min && !afterPopLastElem.isRoot) {
+          console.log("found articulation: ", afterPopLastElem);
+        }
+        if (afterPopLastElem.isRoot) {
+          let directRootChildCount = 0;
+          for (const edge of edges) {
+            if (edge.text[0] === afterPopLastElem.key) directRootChildCount++;
+          }
+          if (directRootChildCount >= 2) {
+            console.log(
+              "found articulation, which is the root element: ",
+              afterPopLastElem.key
+            );
+          }
+        }
       }
     }
 

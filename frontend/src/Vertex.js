@@ -11,10 +11,11 @@ export class LifoElement {
    * @param {number} pos
    * @param {Array[number]} min
    */
-  constructor(key, pos, min) {
+  constructor(key, pos, min, isRoot = false) {
     this.key = key;
     this.pos = pos;
     this.min = min;
+    this.isRoot = isRoot;
   }
 }
 
