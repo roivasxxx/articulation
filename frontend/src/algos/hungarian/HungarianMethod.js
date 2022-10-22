@@ -89,6 +89,24 @@ export default function HungarianMethod() {
     //if there is no sz in row go to step2
     //if there is a sz in row, cover this row, uncover column of sz
     //repeat till al z are covered and go to step3
+    const step1 = () => {
+      const nonCoveredCols = findAllIndices(cols, false);
+      const nonCoveredRows = findAllIndices(rows, false);
+
+      for (const nonRow of nonCoveredRows) {
+        for (const nonCol of nonCoveredCols) {
+          if (zeroArray[nonRow][nonCol] === 0) zeroArray[nonRow][nonCol] = "'";
+          const starIndex = zeroArray[i].indexOf("*");
+          if (starIndex > 0) {
+            cols[starIndex] = false;
+            rows[i] = true;
+          } else {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
 
     //step2
     //unstar all sz, star each pz, erase all pz
@@ -103,10 +121,24 @@ export default function HungarianMethod() {
     //go to step1
   };
 
+  const nonCoveredExist = (matrix, cols) => {
+    const nonCovered = findAllIndices(matrix, false);
+    for (let i = 0; matrix.length; i++) {
+      for (let j = 0; j < matrix.length; j++) {}
+    }
+  };
+
   const getCol = (matrix, index) => {
     const temp = [];
     for (let i = 0; i < matrix.length; i++) {
       temp.push(matrix[i][index]);
+    }
+    return temp;
+  };
+  const findAllIndices = (array, value) => {
+    const temp = [];
+    for (let i = 0; i < array.length; i++) {
+      if (array[i] === value) temp.push(i);
     }
     return temp;
   };
