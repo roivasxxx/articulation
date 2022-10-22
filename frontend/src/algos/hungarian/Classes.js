@@ -1,7 +1,8 @@
 export class CrossingElement {
-  constructor(row, column, isTicked = false) {
-    this.row = row;
-    this.column = column;
+  constructor(type, index, values, isCrossed = false) {
+    this.index = index;
+    this.type = type;
+    this.values = values;
     this.isTicked = isTicked;
   }
 }
