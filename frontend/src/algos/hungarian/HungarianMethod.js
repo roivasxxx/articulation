@@ -39,14 +39,17 @@ export default function HungarianMethod() {
     const rows = new Array(matrixDims).fill(false);
     const cols = new Array(matrixDims).fill(false);
     const zeroArray = [];
+    const valArray = [];
     for (let i = 0; i < matrixDims; i++) {
       zeroArray.push([]);
+      valArray.push([]);
       for (let j = 0; j < matrixDims; j++) {
         const val = baseMatrix[i][j].value;
         zeroArray[i].push(val === 0 ? 0 : "_");
+        valArray[i].push(val);
       }
     }
-    console.log(zeroArray);
+    console.log(zeroArray, valArray);
 
     // const rows = [];
     // const cols = [];
@@ -83,42 +86,120 @@ export default function HungarianMethod() {
         }
       }
     }
-
+    const nonCovered = findNonCovered(zeroArray, cols, rows);
+    console.log("Non covered 0s: ", nonCovered);
     //step1
     //check if non covered zeroes exist in matrix
     //if there is no sz in row go to step2
     //if there is a sz in row, cover this row, uncover column of sz
     //repeat till al z are covered and go to step3
+
     const step1 = () => {
       const nonCoveredCols = findAllIndices(cols, false);
       const nonCoveredRows = findAllIndices(rows, false);
-
       for (const nonRow of nonCoveredRows) {
         for (const nonCol of nonCoveredCols) {
-          if (zeroArray[nonRow][nonCol] === 0) zeroArray[nonRow][nonCol] = "'";
-          const starIndex = zeroArray[i].indexOf("*");
-          if (starIndex > 0) {
-            cols[starIndex] = false;
-            rows[i] = true;
-          } else {
-            return false;
+          if (zeroArray[nonRow][nonCol] === 0) {
+            zeroArray[nonRow][nonCol] = "'";
+
+            const starIndex = zeroArray[nonRow].indexOf("*");
+            if (starIndex > -1) {
+              cols[starIndex] = false;
+              rows[nonRow] = true;
+              break;
+            } else {
+              return false;
+            }
           }
         }
       }
       return true;
     };
+    while (findNonCovered(zeroArray, cols, rows).length > 0) {
+      step1();
+    }
 
+    console.log(findNonCovered(zeroArray, cols, rows));
+    console.log(isFinished(rows, cols), rows, cols);
     //step2
     //unstar all sz, star each pz, erase all pz
     //uncover all rows, cover every column with sz
     //if all columns covered - sz are result
     //else go to step1
+    const step2 = () => {
+      for (let i = 0; i < zeroArray.length; i++) {
+        for (let j = 0; j < zeroArray.length; j++) {}
+      }
+    };
 
     //step3
     //find min of non covered elements
     //add min to all covered rows
     //subtract min from all non covered columns
     //go to step1
+    const step3 = () => {
+      const nonCoveredCols = findAllIndices(cols, false);
+      const nonCoveredRows = findAllIndices(rows, false);
+      const covered = findAllIndices(rows, true);
+      const nonCoveredValues = [];
+      for (const r of nonCoveredRows) {
+        for (const c of nonCoveredCols) {
+          nonCoveredValues.push(valArray[r][c]);
+        }
+      }
+      const min = Math.min(...nonCoveredValues);
+      for (const r of covered) {
+        for (let i = 0; i < zeroArray.length; i++) {
+          valArray[r][i] = valArray[r][i] + min;
+        }
+      }
+      for (const c of nonCoveredCols) {
+        for (let i = 0; i < zeroArray.length; i++) {
+          valArray[i][c] = valArray[i][c] - min;
+        }
+      }
+      for (let i = 0; i < zeroArray.length; i++) {
+        for (let j = 0; j < zeroArray.length; j++) {
+          const val = valArray[i][j];
+          const z = zeroArray[i][j];
+          if (val === 0) {
+            if (z === "_") {
+              zeroArray[i][j] = 0;
+            }
+          } else {
+            if (z === 0) {
+              zeroArray[i][j] = "_";
+            }
+          }
+        }
+      }
+    };
+    step3();
+    console.log(valArray, zeroArray);
+  };
+
+  const isFinished = (rows, cols) => {
+    let count = 0;
+    rows.forEach((el) => {
+      if (el) count++;
+    });
+    cols.forEach((el) => {
+      if (el) count++;
+    });
+    return count === cols.length;
+  };
+  const findNonCovered = (matrix, cols, rows) => {
+    const c = findAllIndices(cols, false);
+    const r = findAllIndices(rows, false);
+    const nonCovered = [];
+    for (const nonR of r) {
+      for (const nonC of c) {
+        if (matrix[nonR][nonC] === 0) {
+          nonCovered.push({ row: nonR, col: nonC });
+        }
+      }
+    }
+    return nonCovered;
   };
 
   const nonCoveredExist = (matrix, cols) => {
