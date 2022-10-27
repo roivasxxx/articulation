@@ -33,9 +33,6 @@ export default function HungarianMethod() {
         baseMatrix[j][i].value = value - min;
       }
     }
-
-    console.log(baseMatrix);
-
     const rows = new Array(matrixDims).fill(false);
     const cols = new Array(matrixDims).fill(false);
     const zeroArray = [];
@@ -49,8 +46,7 @@ export default function HungarianMethod() {
         valArray[i].push(val);
       }
     }
-    console.log(zeroArray, valArray);
-
+    console.log([...zeroArray], [...valArray]);
     // const rows = [];
     // const cols = [];
     // let assigned = [];
@@ -86,8 +82,6 @@ export default function HungarianMethod() {
         }
       }
     }
-    const nonCovered = findNonCovered(zeroArray, cols, rows);
-    console.log("Non covered 0s: ", nonCovered);
     //step1
     //check if non covered zeroes exist in matrix
     //if there is no sz in row go to step2
@@ -95,6 +89,7 @@ export default function HungarianMethod() {
     //repeat till al z are covered and go to step3
 
     const step1 = () => {
+      console.log("running step1");
       const nonCoveredCols = findAllIndices(cols, false);
       const nonCoveredRows = findAllIndices(rows, false);
       for (const nonRow of nonCoveredRows) {
@@ -108,7 +103,8 @@ export default function HungarianMethod() {
               rows[nonRow] = true;
               break;
             } else {
-              return false;
+              console.log("found uncovered zero with no star in its row");
+              return { row: nonRow, column: nonCol };
             }
           }
         }
@@ -116,20 +112,40 @@ export default function HungarianMethod() {
       return true;
     };
     while (findNonCovered(zeroArray, cols, rows).length > 0) {
+      console.log(findNonCovered(zeroArray, cols, rows).length);
       step1();
     }
 
-    console.log(findNonCovered(zeroArray, cols, rows));
+    console.log(findNonCovered(zeroArray, cols, rows).length);
     console.log(isFinished(rows, cols), rows, cols);
     //step2
     //unstar all sz, star each pz, erase all pz
     //uncover all rows, cover every column with sz
     //if all columns covered - sz are result
     //else go to step1
-    const step2 = () => {
-      for (let i = 0; i < zeroArray.length; i++) {
-        for (let j = 0; j < zeroArray.length; j++) {}
+    const step2 = (row, column) => {
+      const alterZeroSeq = [];
+      alterZeroSeq.push({ zero: "'", row, column });
+      const z0Col = getCol(zeroArray, column);
+      const z1Index = z0Col.indexOf("*");
+      if (z1Index > -1) {
+        alterZeroSeq.push({ el: "*", row: z1Index, column });
+        const z2Index = zeroArray[z1Index].indexOf("'");
+        if (z2Index > -1) {
+          alterZeroSeq.push({ el: "'", row: z1Index, column: z2Index });
+          const z3Index = getCol(zeroArray, z2Index);
+          alterZeroSeq.push({ el: "*", row: z3Index, column: z2Index });
+        }
       }
+      for (const el of alterZeroSeq) {
+        if (el.zero === "'") {
+          zeroArray[el.row][el.column] = "*";
+        } else if (el.zero === "*") {
+          zeroArray[el.row][el.column] = 0;
+        }
+      }
+      cols.map(() => false);
+      rows.map(() => false);
     };
 
     //step3
@@ -175,7 +191,25 @@ export default function HungarianMethod() {
       }
     };
     step3();
-    console.log(valArray, zeroArray);
+
+    while (cols.some((el) => !el)) {
+      zeroArray.forEach((el) => {
+        const starIndex = el.indexOf("*");
+        if (starIndex > -1) {
+          cols[starIndex] = true;
+        }
+      });
+      const step1Result = step1();
+      if (step1Result === true) step3();
+      else step2(step1Result.row, step1Result.column);
+    }
+    console.log("finished");
+    const result = [];
+    zeroArray.forEach((el, index) => {
+      const starIndex = el.indexOf("*");
+      result.push({ row: index, column: starIndex });
+    });
+    console.log(result);
   };
 
   const isFinished = (rows, cols) => {
@@ -249,23 +283,6 @@ export default function HungarianMethod() {
     }
     return indices;
   };
-
-  // const findZeroes = (variation, index) => {
-  //   //returns all zero values in row/column
-  //   const indicesArray = [];
-  //   if (variation === 0) {
-  //     //row
-  //     baseMatrix[index].forEach((el, index) => {
-  //       if (el.value === 0) indicesArray.push(index);
-  //     });
-  //   } else {
-  //     //column
-  //     for (let i = 0; i < matrixDims; i++) {
-  //       if (baseMatrix[i][index].value === 0) indicesArray.push(i);
-  //     }
-  //   }
-  //   return indicesArray;
-  // };
 
   return (
     <div>
