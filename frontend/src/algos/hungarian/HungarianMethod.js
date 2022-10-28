@@ -1,7 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { BaseElement, CrossingElement } from "./Classes";
+import { HUNG_STEPS } from "../../utils";
 
 export default function HungarianMethod() {
+  const [matrix, setMatrix] = useState([
+    [22, 16, 25, 20],
+    [20, 15, 20, 16],
+    [18, 15, 16, 20],
+    [25, 20, 22, 21],
+  ]);
   const matrixDims = 4;
   const matrixValues = [
     [22, 16, 25, 20],
@@ -17,55 +24,49 @@ export default function HungarianMethod() {
     }
   }
   const handleClick = () => {
-    //first we substract each row by its min
-    for (let i = 0; i < matrixDims; i++) {
-      const min = findMin(0, i);
-      baseMatrix[i].forEach((el, index) => {
-        const value = baseMatrix[i][index].value;
-        baseMatrix[i][index].value = value - min;
-      });
-    }
-    //then we subtract each column by its min
-    for (let i = 0; i < matrixDims; i++) {
-      const min = findMin(1, i);
-      for (let j = 0; j < matrixDims; j++) {
-        const value = baseMatrix[j][i].value;
-        baseMatrix[j][i].value = value - min;
-      }
-    }
+    const matrixDims = matrix.length;
+    const steps = [];
     const rows = new Array(matrixDims).fill(false);
     const cols = new Array(matrixDims).fill(false);
     const zeroArray = [];
     const valArray = [];
+
+    matrix.forEach((r) => {
+      valArray.push([...r]);
+    });
+
+    const copyMatrix = () => {
+      const temp = [];
+      valArray.forEach((r) => {
+        temp.push([...r]);
+      });
+      return temp;
+    };
+    //first we substract each row by its min
     for (let i = 0; i < matrixDims; i++) {
-      zeroArray.push([]);
-      valArray.push([]);
+      const min = findMin(0, i, valArray);
+      valArray[i].forEach((el, index) => {
+        const value = valArray[i][index];
+        valArray[i][index] = value - min;
+      });
+    }
+    steps.push({ matrix: copyMatrix(), action: HUNG_STEPS[0] });
+    //then we subtract each column by its min
+    for (let i = 0; i < matrixDims; i++) {
+      const min = findMin(1, i, valArray);
       for (let j = 0; j < matrixDims; j++) {
-        const val = baseMatrix[i][j].value;
-        zeroArray[i].push(val === 0 ? 0 : "_");
-        valArray[i].push(val);
+        const value = valArray[j][i];
+        valArray[j][i] = value - min;
       }
     }
-    console.log([...zeroArray], [...valArray]);
-    // const rows = [];
-    // const cols = [];
-    // let assigned = [];
-    // baseMatrix.forEach((el, index) => {
-    //   rows.push(
-    //     new CrossingElement(
-    //       0,
-    //       index,
-    //       el.map((el) => el.value)
-    //     )
-    //   );
-    //   const tempCol = [];
-    //   for (let i = 0; i < matrixDims; i++) {
-    //     tempCol.push(baseMatrix[i][index].value);
-    //   }
-    //   cols.push(new CrossingElement(1, index, tempCol));
-    // });
-    // console.log(rows);
-    // console.log(cols);
+    steps.push({ matrix: copyMatrix(), action: HUNG_STEPS[1] });
+    for (let i = 0; i < matrixDims; i++) {
+      zeroArray.push([]);
+      for (let j = 0; j < matrixDims; j++) {
+        const val = valArray[i][j];
+        zeroArray[i].push(val === 0 ? 0 : "_");
+      }
+    }
 
     //zero-z , starred zero - sz, primed zero - pz
     //on a given row that has zeroes
@@ -82,6 +83,12 @@ export default function HungarianMethod() {
         }
       }
     }
+    steps.push({
+      matrix: copyMatrix(),
+      action: HUNG_STEPS[2],
+      cols: [...cols],
+      rows: [...rows],
+    });
     //step1
     //check if non covered zeroes exist in matrix
     //if there is no sz in row go to step2
@@ -89,7 +96,6 @@ export default function HungarianMethod() {
     //repeat till al z are covered and go to step3
 
     const step1 = () => {
-      console.log("running step1");
       const nonCoveredCols = findAllIndices(cols, false);
       const nonCoveredRows = findAllIndices(rows, false);
       for (const nonRow of nonCoveredRows) {
@@ -109,15 +115,14 @@ export default function HungarianMethod() {
           }
         }
       }
+      steps.push({
+        matrix: copyMatrix(),
+        action: HUNG_STEPS[3],
+        rows: [...rows],
+        cols: [...cols],
+      });
       return true;
     };
-    while (findNonCovered(zeroArray, cols, rows).length > 0) {
-      console.log(findNonCovered(zeroArray, cols, rows).length);
-      step1();
-    }
-
-    console.log(findNonCovered(zeroArray, cols, rows).length);
-    console.log(isFinished(rows, cols), rows, cols);
     //step2
     //unstar all sz, star each pz, erase all pz
     //uncover all rows, cover every column with sz
@@ -190,7 +195,6 @@ export default function HungarianMethod() {
         }
       }
     };
-    step3();
 
     while (cols.some((el) => !el)) {
       zeroArray.forEach((el) => {
@@ -209,7 +213,9 @@ export default function HungarianMethod() {
       const starIndex = el.indexOf("*");
       result.push({ row: index, column: starIndex });
     });
+    steps[steps.length - 1].result = result;
     console.log(result);
+    console.log(steps);
   };
 
   const isFinished = (rows, cols) => {
@@ -258,18 +264,15 @@ export default function HungarianMethod() {
     return temp;
   };
 
-  const findMin = (variation, index) => {
+  const findMin = (variation, index, baseMatrix) => {
     //0-row 1-column 2-matrix
     if (variation === 0) {
-      const vals = baseMatrix[index].map((el) => el.value);
+      const vals = baseMatrix[index];
       return Math.min(...vals);
     } else if (variation === 1) {
-      const indices = [...new Array(matrixDims).keys()];
+      const indices = [...new Array(baseMatrix.length).keys()];
 
-      const column = [
-        ...Array.from(indices, (x) => baseMatrix[x][index].value),
-      ];
-      console.log(Math.min(...column));
+      const column = [...Array.from(indices, (x) => baseMatrix[x][index])];
       return Math.min(...column);
     } else if (variation === 2) {
       //todo
