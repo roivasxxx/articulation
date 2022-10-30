@@ -1,28 +1,11 @@
 import React, { useState } from "react";
 import { BaseElement, CrossingElement } from "./Classes";
 import { HUNG_STEPS } from "../../utils";
+import * as testMatrices from "../../test/HungarianMethodTest";
 
 export default function HungarianMethod() {
-  const [matrix, setMatrix] = useState([
-    [22, 16, 25, 20],
-    [20, 15, 20, 16],
-    [18, 15, 16, 20],
-    [25, 20, 22, 21],
-  ]);
-  const matrixDims = 4;
-  const matrixValues = [
-    [22, 16, 25, 20],
-    [20, 15, 20, 16],
-    [18, 15, 16, 20],
-    [25, 20, 22, 21],
-  ];
-  const baseMatrix = [];
-  for (let i = 0; i < matrixDims; i++) {
-    baseMatrix.push([]);
-    for (let j = 0; j < matrixDims; j++) {
-      baseMatrix[i].push(new BaseElement(matrixValues[i][j], i, j));
-    }
-  }
+  const [matrix, setMatrix] = useState(testMatrices.m3);
+
   const handleClick = () => {
     const matrixDims = matrix.length;
     const steps = [];
@@ -35,11 +18,18 @@ export default function HungarianMethod() {
       valArray.push([...r]);
     });
 
-    const copyMatrix = () => {
+    const copyMatrix = (val = 0) => {
       const temp = [];
-      valArray.forEach((r) => {
-        temp.push([...r]);
-      });
+      if (val === 0) {
+        valArray.forEach((r) => {
+          temp.push([...r]);
+        });
+      } else {
+        zeroArray.forEach((_, i) => {
+          const col = getCol(zeroArray, i);
+          temp.push([...col]);
+        });
+      }
       return temp;
     };
     //first we substract each row by its min
@@ -89,6 +79,7 @@ export default function HungarianMethod() {
       cols: [...cols],
       rows: [...rows],
     });
+
     //step1
     //check if non covered zeroes exist in matrix
     //if there is no sz in row go to step2
@@ -96,31 +87,37 @@ export default function HungarianMethod() {
     //repeat till al z are covered and go to step3
 
     const step1 = () => {
-      const nonCoveredCols = findAllIndices(cols, false);
-      const nonCoveredRows = findAllIndices(rows, false);
-      for (const nonRow of nonCoveredRows) {
-        for (const nonCol of nonCoveredCols) {
-          if (zeroArray[nonRow][nonCol] === 0) {
-            zeroArray[nonRow][nonCol] = "'";
-
-            const starIndex = zeroArray[nonRow].indexOf("*");
-            if (starIndex > -1) {
-              cols[starIndex] = false;
-              rows[nonRow] = true;
+      //check if non covered zeroes exist
+      //row and cols are covered/uncovered(changed) so uncovered zeroes also change!
+      //cant just use two loops that check non covered zeroes before step1 runs
+      let allZeroesCovered = false;
+      while (!allZeroesCovered) {
+        const nonCoveredCols = findAllIndices(cols, false);
+        const nonCoveredRows = findAllIndices(rows, false);
+        const uncoveredZeroes = [];
+        for (const nonRow of nonCoveredRows) {
+          for (const nonCol of nonCoveredCols) {
+            if (zeroArray[nonRow][nonCol] === 0) {
+              uncoveredZeroes.push({ nonRow, nonCol });
               break;
-            } else {
-              console.log("found uncovered zero with no star in its row");
-              return { row: nonRow, column: nonCol };
             }
           }
+          if (uncoveredZeroes.length > 0) break;
+        }
+        if (uncoveredZeroes.length === 0) break;
+        const { nonRow, nonCol } = uncoveredZeroes[0];
+        const zeroRow = zeroArray[nonRow];
+        const starIndex = zeroRow.indexOf("*");
+        if (starIndex > -1) {
+          zeroArray[nonRow][nonCol] = "'";
+          cols[starIndex] = false;
+          rows[nonRow] = true;
+        } else {
+          console.log("found uncovered zero with no star in its row");
+          return { row: nonRow, column: nonCol };
         }
       }
-      steps.push({
-        matrix: copyMatrix(),
-        action: HUNG_STEPS[3],
-        rows: [...rows],
-        cols: [...cols],
-      });
+
       return true;
     };
     //step2
@@ -131,17 +128,30 @@ export default function HungarianMethod() {
     const step2 = (row, column) => {
       const alterZeroSeq = [];
       alterZeroSeq.push({ zero: "'", row, column });
-      const z0Col = getCol(zeroArray, column);
-      const z1Index = z0Col.indexOf("*");
-      if (z1Index > -1) {
-        alterZeroSeq.push({ el: "*", row: z1Index, column });
-        const z2Index = zeroArray[z1Index].indexOf("'");
-        if (z2Index > -1) {
-          alterZeroSeq.push({ el: "'", row: z1Index, column: z2Index });
-          const z3Index = getCol(zeroArray, z2Index);
-          alterZeroSeq.push({ el: "*", row: z3Index, column: z2Index });
+
+      while (true) {
+        const lastIndex = alterZeroSeq.length - 1;
+        const lastZero = alterZeroSeq[lastIndex];
+        if (lastZero.zero === "'") {
+          const col = getCol(zeroArray, lastZero.column);
+          const nextZeroIndex = col.indexOf("*");
+          if (nextZeroIndex === -1) break;
+          alterZeroSeq.push({
+            zero: "*",
+            row: nextZeroIndex,
+            column: lastZero.column,
+          });
+        } else if (lastZero.zero === "*") {
+          const nextZeroIndex = zeroArray[lastZero.row].indexOf("'");
+          if (nextZeroIndex === -1) break;
+          alterZeroSeq.push({
+            zero: "'",
+            row: lastZero.row,
+            column: nextZeroIndex,
+          });
         }
       }
+
       for (const el of alterZeroSeq) {
         if (el.zero === "'") {
           zeroArray[el.row][el.column] = "*";
@@ -149,8 +159,21 @@ export default function HungarianMethod() {
           zeroArray[el.row][el.column] = 0;
         }
       }
-      cols.map(() => false);
-      rows.map(() => false);
+      const tempCols = copyMatrix(1);
+      tempCols.forEach((el, i) => {
+        cols[i] = el.includes("*");
+        rows[i] = false;
+      });
+
+      if (cols.every((el) => el)) {
+        steps.push({
+          matrix: copyMatrix(),
+          action: HUNG_STEPS[3],
+          rows: [...rows],
+          cols: [...cols],
+          zeroMatrix: copyMatrix(1),
+        });
+      }
     };
 
     //step3
@@ -194,16 +217,18 @@ export default function HungarianMethod() {
           }
         }
       }
+      steps.push({
+        matrix: copyMatrix(),
+        action: HUNG_STEPS[3],
+        rows: [...rows],
+        cols: [...cols],
+        zeroMatrix: copyMatrix(1),
+      });
     };
 
     while (cols.some((el) => !el)) {
-      zeroArray.forEach((el) => {
-        const starIndex = el.indexOf("*");
-        if (starIndex > -1) {
-          cols[starIndex] = true;
-        }
-      });
       const step1Result = step1();
+      console.log("step1 result: ", step1Result);
       if (step1Result === true) step3();
       else step2(step1Result.row, step1Result.column);
     }
@@ -213,9 +238,8 @@ export default function HungarianMethod() {
       const starIndex = el.indexOf("*");
       result.push({ row: index, column: starIndex });
     });
-    steps[steps.length - 1].result = result;
-    console.log(result);
     console.log(steps);
+    steps[steps.length - 1].result = result;
   };
 
   const isFinished = (rows, cols) => {
